@@ -55,7 +55,7 @@ const $=s=>document.querySelector(s);
 let seed=42;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
 const r=(a,b)=>a+(b-a)*rnd(),fmt=(n,d=2)=>n.toLocaleString('en-IN',{maximumFractionDigits:d,minimumFractionDigits:d});
 const cls=n=>n>=0?'up':'dn',sg=n=>(n>=0?'+':'')+fmt(n);
-const tabs=[['pulse','Pulse'],['sectors','Sectors'],['options','Options & OI'],['screener','Screeners'],['strength','Strength'],['radar','Radar & news'],['journal','Journal'],['academy','Academy']];
+const tabs=[['pulse','Pulse'],['sectors','Sectors'],['options','Options & OI'],['screener','Screeners'],['strength','Strength'],['dvm','DVM'],['radar','Radar & news'],['journal','Journal'],['academy','Academy']];
 // ---- live data
 let idx=[],vix=0,adv=0,dec=0,sectors=[],stocks=[],strikes=[],events=[],news=[],meta={};
 async function load(){try{const r=await fetch('/api/snapshot',{cache:'no-store'});if(!r.ok)throw 0;const d=await r.json();
@@ -101,6 +101,27 @@ V.strength=()=>{const L=[...stocks].sort((a,b)=>b.rs-a.rs);
 return `<h1>Strength & liquidity</h1><p class="mute">Relative strength versus NIFTY, with a liquidity score and a volatility regime (sample).</p>
 <div class="card">${L.map(s=>{const reg=s.vol>2.4?'Volatile':'Calm';return`<div class="bar"><b style="width:110px">${s.n}</b><div class="track" style="background:var(--line);border-radius:3px"><i style="width:${s.liq}%;background:${s.rs>=0?'var(--up)':'var(--dn)'};opacity:.85"></i></div><span class="${cls(s.rs)}" style="width:64px;text-align:right">${sg(s.rs)}%</span><span class="tag" style="width:70px;text-align:center">${reg}</span></div>`}).join('')}</div>
 <p class="mute">Bar length is the liquidity score (0–100). Colour shows outperforming (green) or lagging (orange) NIFTY. Thin liquidity means wider spreads and harder exits.</p>`};
+// ---- DVM: transparent first-pass momentum score; fundamentals remain unavailable until licensed history is connected
+const percentile=(values,value)=>{const sorted=[...values].sort((a,b)=>a-b);let lo=0,hi=sorted.length;while(lo<hi){const mid=(lo+hi)>>1;if(sorted[mid]<=value)lo=mid+1;else hi=mid;}return sorted.length<2?50:(lo-1)/(sorted.length-1)*100};
+const clamp=(n,a=0,b=100)=>Math.max(a,Math.min(b,n));
+const dvmRows=()=>stocks.map(s=>{
+ const p=percentile(stocks.map(x=>x.c),s.c);
+ const rs=percentile(stocks.map(x=>x.rs),s.rs);
+ const rsi=clamp(100-Math.abs(s.rsi-55)*4);
+ const momentum=Math.round(p*.4+rs*.4+rsi*.2);
+ return {...s,momentum};
+}).sort((a,b)=>b.momentum-a.momentum);
+V.dvm=()=>{const rows=dvmRows();const avg=rows.length?Math.round(rows.reduce((a,s)=>a+s.momentum,0)/rows.length):0;
+return `<h1>DVM scorecard</h1><p class="mute">Durability · Valuation · Momentum. Independent, transparent scores — not Trendlyne's proprietary formula.</p>
+<div class="grid">
+ <div class="card"><h3>Momentum</h3><div class="big">${avg}<span class="mute"> / 100</span></div><div class="mute">Average of available sample-stock momentum scores.</div></div>
+ <div class="card"><h3>Durability</h3><div class="big">—</div><div class="mute">Awaiting verified multi-year financial statements and consistency data.</div></div>
+ <div class="card"><h3>Valuation</h3><div class="big">—</div><div class="mute">Awaiting verified earnings, book value and sector/history multiples.</div></div>
+</div>
+<div class="card" style="margin-top:14px"><h2>Stock-level DVM</h2><p class="mute">Momentum = 40% cross-sectional price-change percentile + 40% relative-strength percentile + 20% RSI positioning score. Durability and Valuation are intentionally blank; no combined DVM grade is shown until all three pillars are supported.</p>
+<div class="scroll"><table><tr><th>Stock</th><th>Momentum</th><th>Durability</th><th>Valuation</th><th>Coverage</th></tr>
+${rows.map(s=>`<tr><td><b>${s.n}</b></td><td class="${s.momentum>=60?'up':s.momentum<40?'dn':''}">${s.momentum}</td><td>—</td><td>—</td><td><span class="tag">Momentum only</span></td></tr>`).join('')}</table></div></div>
+<p class="mute">Data status: ${meta.mode||'unknown'} · ${meta.asOf?'Updated '+new Date(meta.asOf).toLocaleString('en-IN'):'timestamp unavailable'}. Percentile scores are relative to this displayed universe and will change when the universe changes. This is an educational research aid, not investment advice.</p>`};
 V.radar=()=>`<h1>Radar & news</h1><p class="mute">Practice feed of unusual moves, plus learning reads.</p>
 <div class="grid"><div class="card"><h3>Intraday radar</h3>${events.map(e=>`<p style="margin:.5em 0">• ${e}</p>`).join('')}</div>
 <div class="card"><h3>Learning reads</h3>${news.map(e=>`<p style="margin:.5em 0">• ${e}</p>`).join('')}</div></div>`;
