@@ -5,7 +5,7 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';            // admin is 
 const SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
 const settings = { provider: process.env.PROVIDER || 'demo', refresh: +process.env.REFRESH_SECONDS || 30, announcement: '' };
 const stats = { started: new Date().toISOString(), fetches: 0, errors: 0, lastError: '', lastOk: null };
-let provider = load(settings.provider), cache = null, at = 0, busy = null;
+let provider = load(settings.provider), cache = null, at = 0, busy = null;\nconst memFund = new Map();
 
 function load(name) { if (!/^[a-z]+$/.test(name)) throw new Error('bad provider'); return require('./' + name); }
 async function snapshot(force) {
@@ -40,6 +40,24 @@ http.createServer(async (req, res) => {
   if (p === '/api/snapshot') {
     try { json(res, 200, { ...(await snapshot()), announcement: settings.announcement }); } catch { json(res, 502, { error: 'data source unavailable' }); }
     return;
+  }
+
+  if (p === '/api/fundamentals') {
+    const isin = (url.searchParams.get('isin') || '').toUpperCase();
+    const statementType = url.searchParams.get('type') || 'consolidated';
+    const timePeriod = url.searchParams.get('period') || 'yearly';
+    if (!/^[A-Z]{2}[A-Z0-9]{10}$/.test(isin) || !['consolidated','standalone'].includes(statementType) || !['yearly','quarterly'].includes(timePeriod))
+      return json(res, 400, { error: 'Provide a valid ISIN, statement type and reporting period.' });
+    if (typeof provider.getFundamentals !== 'function') return json(res, 503, { error: 'Fundamentals require the Upstox provider. Set PROVIDER=upstox after adding the Upstox token.' });
+    try {
+      const key = 'fund|' + isin + '|' + statementType + '|' + timePeriod;
+      const hit = memFund.get(key);
+      if (hit && Date.now() - hit.at < 6 * 3600e3) return json(res, 200, hit.data);
+      const data = await withTimeout(provider.getFundamentals(isin, statementType, timePeriod), 30000);
+      memFund.set(key, { at: Date.now(), data });
+      if (memFund.size > 100) memFund.delete(memFund.keys().next().value);
+      return json(res, 200, data);
+    } catch (e) { stats.errors++; stats.lastError = e.message; return json(res, 502, { error: e.message }); }
   }
   if (p === '/api/health') { res.writeHead(200); return res.end('ok'); }
   if (p.startsWith('/api/admin/')) {
