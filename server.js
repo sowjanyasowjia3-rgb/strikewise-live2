@@ -5,7 +5,8 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';            // admin is 
 const SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
 const settings = { provider: process.env.PROVIDER || 'demo', refresh: +process.env.REFRESH_SECONDS || 30, announcement: '' };
 const stats = { started: new Date().toISOString(), fetches: 0, errors: 0, lastError: '', lastOk: null };
-let provider = load(settings.provider), cache = null, at = 0, busy = null;\nconst memFund = new Map();
+let provider = load(settings.provider), cache = null, at = 0, busy = null;
+const memFund = new Map();
 
 function load(name) { if (!/^[a-z]+$/.test(name)) throw new Error('bad provider'); return require('./' + name); }
 async function snapshot(force) {
