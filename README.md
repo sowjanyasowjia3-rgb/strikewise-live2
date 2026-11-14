@@ -11,7 +11,7 @@ Open http://localhost:3000. Env: PORT, REFRESH_SECONDS (default 30), PROVIDER.
 
 ## Go live with real data
 1. Get a licence or API from an authorised vendor or your broker. Read its terms on display and redistribution.
-2. Implement `getSnapshot()` in providers/licensed.js and return the JSON shape documented at the top of that file.
+2. Implement `getSnapshot()` in providers/licensed.js and return the JSON shape documented at the top of that file. The current licensed provider is a scaffold and does not fetch market data until you implement your vendor's API mapping.
 3. Set `mode` ('live' or 'delayed') and `delayMinutes` to match your licence. The page header shows them.
 4. Deploy to any Node host (Render, Railway, Fly.io, a VPS). Keep API keys in environment variables, never in public/.
 
@@ -32,7 +32,7 @@ Use HTTPS (your host provides it) and never put the password in the code or in p
 
 ## Strikewise Next — DVM preview
 
-The `strikewise-next` branch adds a first-pass DVM (Durability, Valuation, Momentum) scorecard to the existing dashboard.
+The `strikewise-next` branch also aligns the Node server with this repository's flat file layout (root-level app files and provider modules), so the root `index.html` and `demo.js` are served/loaded consistently. The branch adds a first-pass DVM (Durability, Valuation, Momentum) scorecard to the existing dashboard.
 
 - **Momentum (0–100):** 40% percentile rank of price change, 40% percentile rank of relative strength, and 20% RSI-positioning score across the displayed stock universe.
 - **Durability:** intentionally unavailable until verified multi-year financial history and consistency metrics are connected.
