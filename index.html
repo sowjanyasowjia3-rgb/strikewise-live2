@@ -55,7 +55,7 @@ const $=s=>document.querySelector(s);
 let seed=42;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
 const r=(a,b)=>a+(b-a)*rnd(),fmt=(n,d=2)=>n.toLocaleString('en-IN',{maximumFractionDigits:d,minimumFractionDigits:d});
 const cls=n=>n>=0?'up':'dn',sg=n=>(n>=0?'+':'')+fmt(n);
-const tabs=[['pulse','Pulse'],['sectors','Sectors'],['options','Options & OI'],['screener','Screeners'],['strength','Strength'],['dvm','DVM'],['radar','Radar & news'],['journal','Journal'],['academy','Academy']];
+const tabs=[['pulse','Pulse'],['sectors','Sectors'],['options','Options & OI'],['screener','Screeners'],['strength','Strength'],['dvm','DVM'],['fundamentals','Fundamentals'],['radar','Radar & news'],['journal','Journal'],['academy','Academy']];
 // ---- live data
 let idx=[],vix=0,adv=0,dec=0,sectors=[],stocks=[],strikes=[],events=[],news=[],meta={};
 async function load(){try{const r=await fetch('/api/snapshot',{cache:'no-store'});if(!r.ok)throw 0;const d=await r.json();
@@ -122,6 +122,18 @@ return `<h1>DVM scorecard</h1><p class="mute">Durability · Valuation · Momentu
 <div class="scroll"><table><tr><th>Stock</th><th>Momentum</th><th>Durability</th><th>Valuation</th><th>Coverage</th></tr>
 ${rows.map(s=>`<tr><td><b>${s.n}</b></td><td class="${s.momentum>=60?'up':s.momentum<40?'dn':''}">${s.momentum}</td><td>—</td><td>—</td><td><span class="tag">Momentum only</span></td></tr>`).join('')}</table></div></div>
 <p class="mute">Data status: ${meta.mode||'unknown'} · ${meta.asOf?'Updated '+new Date(meta.asOf).toLocaleString('en-IN'):'timestamp unavailable'}. Percentile scores are relative to this displayed universe and will change when the universe changes. This is an educational research aid, not investment advice.</p>`};
+
+V.fundamentals=()=>`<h1>Fundamental analysis</h1>
+<p class="mute">Company financials, ratios, ownership and corporate actions from Upstox. Enter the company's 12-character ISIN to retrieve its reports.</p>
+<div class="card">
+ <div class="row"><input id="fundIsin" maxlength="12" placeholder="ISIN e.g. INE002A01018" aria-label="Company ISIN" style="flex:1;text-transform:uppercase">
+ <select id="fundType" aria-label="Statement type"><option value="consolidated">Consolidated</option><option value="standalone">Standalone</option></select>
+ <select id="fundPeriod" aria-label="Reporting period"><option value="yearly">Yearly</option><option value="quarterly">Quarterly</option></select>
+ <button id="fundLoad">Load company</button></div>
+ <p id="fundStatus" class="mute" aria-live="polite">Fundamental data is fetched on demand and cached for six hours.</p>
+</div>
+<div id="fundOutput" class="card" style="margin-top:14px;display:none"><h2>Upstox response</h2><p class="mute">Raw source data is shown transparently for this first integration pass. Missing endpoints are listed separately; values are not estimated.</p><pre id="fundJson" style="white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;max-height:650px;overflow:auto"></pre></div>
+<p class="mute">Important: financial data may be consolidated or standalone and annual or quarterly. Always check the reporting period and data availability. This is a research/education tool, not investment advice.</p>`;
 V.radar=()=>`<h1>Radar & news</h1><p class="mute">Practice feed of unusual moves, plus learning reads.</p>
 <div class="grid"><div class="card"><h3>Intraday radar</h3>${events.map(e=>`<p style="margin:.5em 0">• ${e}</p>`).join('')}</div>
 <div class="card"><h3>Learning reads</h3>${news.map(e=>`<p style="margin:.5em 0">• ${e}</p>`).join('')}</div></div>`;
@@ -143,7 +155,26 @@ function go(){if(!meta.asOf&&!meta.err&&!['journal','academy'].includes((locatio
 $('#nav').innerHTML=tabs.map(([k,n])=>`<a href="#${k}" class="${k==t?'on':''}">${n}</a>`).join('');
 $('#app').innerHTML=`<div class="banner"><b>For learning only.</b> Check the status tag at the top for data mode and age. Never trade from this page.${meta.announcement?'<br>'+String(meta.announcement).replace(/</g,'&lt;'):''}</div>`+V[t]();bind(t);scrollTo(0,0)}
 function bind(t){
-if(t=='screener')document.querySelectorAll('#tbl th[data-k]').forEach(h=>h.onclick=()=>{const k=h.dataset.k;sd=sk==k?-sd:-1;sk=k;go()});
+
+if(t=='fundamentals'){
+ const btn=$('#fundLoad'), isin=$('#fundIsin'), status=$('#fundStatus'), out=$('#fundOutput'), pre=$('#fundJson');
+ btn.onclick=async()=>{
+  const code=isin.value.trim().toUpperCase(); isin.value=code;
+  if(!/^[A-Z]{2}[A-Z0-9]{10}$/.test(code)){status.textContent='Please enter a valid 12-character ISIN.';return}
+  btn.disabled=true;status.textContent='Fetching company fundamentals from Upstox…';out.style.display='none';
+  try{
+   const q=new URLSearchParams({isin:code,type:$('#fundType').value,period:$('#fundPeriod').value});
+   const res=await fetch('/api/fundamentals?'+q.toString(),{cache:'no-store'}), data=await res.json();
+   if(!res.ok)throw new Error(data.error||'Fundamental data unavailable.');
+   pre.textContent=JSON.stringify(data,null,2);out.style.display='block';
+   const missing=Object.keys(data.errors||{});
+   status.textContent='Retrieved '+Object.keys(data.data||{}).length+' data sections · '+new Date(data.asOf).toLocaleString('en-IN')+(missing.length?' · unavailable: '+missing.join(', '):'');
+  }catch(e){status.textContent=e.message}
+  finally{btn.disabled=false}
+ };
+ isin.oninput=()=>{isin.value=isin.value.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,12)};
+}
+\nif(t=='screener')document.querySelectorAll('#tbl th[data-k]').forEach(h=>h.onclick=()=>{const k=h.dataset.k;sd=sk==k?-sd:-1;sk=k;go()});
 if(t=='journal'){$('#jadd').onclick=()=>{const n=$('#jn').value.trim();if(!n)return;let j=[];try{j=JSON.parse(localStorage.getItem('sw-journal')||'[]')}catch(e){}
 j.unshift({t:$('#jt').value.trim(),k:$('#jk').value,n:n.replace(/</g,'&lt;'),d:new Date().toLocaleDateString('en-IN')});try{localStorage.setItem('sw-journal',JSON.stringify(j))}catch(e){}go()};
 $('#jclr').onclick=()=>{try{localStorage.removeItem('sw-journal')}catch(e){}go()};$('#jt').oninput=e=>{e.target.value=e.target.value.replace(/</g,'')}}
