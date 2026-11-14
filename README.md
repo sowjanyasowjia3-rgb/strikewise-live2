@@ -29,3 +29,15 @@ there is no default password. Then open `/admin` on your site and sign in. You c
 refresh, switch provider, change the refresh interval and post a notice to visitors. Sessions last 8 hours; five wrong
 passwords from one address lock sign-in for 15 minutes. Optional: set `SESSION_SECRET` so sessions survive restarts.
 Use HTTPS (your host provides it) and never put the password in the code or in public/.
+
+## Strikewise Next — DVM preview
+
+The `strikewise-next` branch adds a first-pass DVM (Durability, Valuation, Momentum) scorecard to the existing dashboard.
+
+- **Momentum (0–100):** 40% percentile rank of price change, 40% percentile rank of relative strength, and 20% RSI-positioning score across the displayed stock universe.
+- **Durability:** intentionally unavailable until verified multi-year financial history and consistency metrics are connected.
+- **Valuation:** intentionally unavailable until verified earnings/book-value data and comparable sector/history multiples are connected.
+- No combined DVM grade is published while either fundamental pillar is missing. The current dashboard's demo feed is simulated and the score is for interface/prototype validation only.
+
+This is an independent, transparent methodology, not a reproduction of Trendlyne's proprietary scoring formula. Do not use demo scores for investment decisions.
+
