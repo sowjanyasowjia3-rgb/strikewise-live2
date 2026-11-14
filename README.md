@@ -41,3 +41,11 @@ The `strikewise-next` branch also aligns the Node server with this repository's 
 
 This is an independent, transparent methodology, not a reproduction of Trendlyne's proprietary scoring formula. Do not use demo scores for investment decisions.
 
+
+\n## Upstox integration (Strikewise Next)
+\nThe `strikewise-next` branch includes an Upstox provider adapter copied from the working Bheeshma integration and adapted to this repository's flat root layout. It supports live index quotes, India VIX, option-chain data, F&O stock universe/radar and historical candles through the existing read-only Analytics Token workflow.
+\n
+\nTo enable it on Render, set `PROVIDER=upstox` and copy the existing `UPSTOX_ANALYTICS_TOKEN` value from the Bheeshma service into the Strikewise Next service's Environment settings. Keep it server-side. Do not put tokens in GitHub or browser code. If the Fundamentals endpoints reject the Analytics Token, set a separately authorized `UPSTOX_FUNDAMENTALS_TOKEN`; the provider checks that variable first.
+\n
+\nThe Fundamentals page accepts a 12-character ISIN and retrieves company profile, key ratios, annual/quarterly income statement, balance sheet, cash flow, shareholding, corporate actions and competitors. Responses are cached for six hours. Endpoint-level errors are displayed rather than fabricating missing figures. Upstox documents these endpoints at https://upstox.com/developer/api-documentation/fundamentals/.
+\n
