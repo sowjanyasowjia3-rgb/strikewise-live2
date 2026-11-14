@@ -174,7 +174,8 @@ if(t=='fundamentals'){
  };
  isin.oninput=()=>{isin.value=isin.value.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,12)};
 }
-\nif(t=='screener')document.querySelectorAll('#tbl th[data-k]').forEach(h=>h.onclick=()=>{const k=h.dataset.k;sd=sk==k?-sd:-1;sk=k;go()});
+;
+if(t=='screener')document.querySelectorAll('#tbl th[data-k]').forEach(h=>h.onclick=()=>{const k=h.dataset.k;sd=sk==k?-sd:-1;sk=k;go()});
 if(t=='journal'){$('#jadd').onclick=()=>{const n=$('#jn').value.trim();if(!n)return;let j=[];try{j=JSON.parse(localStorage.getItem('sw-journal')||'[]')}catch(e){}
 j.unshift({t:$('#jt').value.trim(),k:$('#jk').value,n:n.replace(/</g,'&lt;'),d:new Date().toLocaleDateString('en-IN')});try{localStorage.setItem('sw-journal',JSON.stringify(j))}catch(e){}go()};
 $('#jclr').onclick=()=>{try{localStorage.removeItem('sw-journal')}catch(e){}go()};$('#jt').oninput=e=>{e.target.value=e.target.value.replace(/</g,'')}}
