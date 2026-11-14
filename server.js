@@ -7,7 +7,7 @@ const settings = { provider: process.env.PROVIDER || 'demo', refresh: +process.e
 const stats = { started: new Date().toISOString(), fetches: 0, errors: 0, lastError: '', lastOk: null };
 let provider = load(settings.provider), cache = null, at = 0, busy = null;
 
-function load(name) { if (!/^[a-z]+$/.test(name)) throw new Error('bad provider'); return require('./providers/' + name); }
+function load(name) { if (!/^[a-z]+$/.test(name)) throw new Error('bad provider'); return require('./' + name); }
 async function snapshot(force) {
   if (!force && cache && Date.now() - at < settings.refresh * 1000) return cache;
   if (busy) return busy;
@@ -66,9 +66,10 @@ http.createServer(async (req, res) => {
     }
     return json(res, 404, { error: 'not found' });
   }
-  const rel = p === '/' ? 'index.html' : p === '/admin' ? 'admin.html' : path.normalize(p).replace(/^(\.\.[\/\\])+/, '');
-  const file = path.join(__dirname, 'public', rel);
-  if (!file.startsWith(path.join(__dirname, 'public'))) { res.writeHead(403); return res.end(); }
+  const rel = p === '/' ? 'index.html' : p === '/admin' ? 'admin.html' : path.normalize(decodeURIComponent(p)).replace(/^[/\\]+/, '');
+  const root = path.resolve(__dirname);
+  const file = path.resolve(root, rel);
+  if (file !== root && !file.startsWith(root + path.sep)) { res.writeHead(403); return res.end(); }
   fs.readFile(file, (err, buf) => {
     if (err) { res.writeHead(404); return res.end('Not found'); }
     res.writeHead(200, { 'Content-Type': types[path.extname(file)] || 'application/octet-stream' }); res.end(buf);
